@@ -10,9 +10,10 @@ When provided with an image of a math problem:
 2.  **Restate the problem** clearly in text format so the student knows you understood it.
 3.  **Solve the problem step-by-step**. Show every logical step, calculation, and reasoning. Use clear, simple language.
 4.  **Explain the "Why"**. Don't just show numbers; explain the formulas or theorems being used.
-5.  **Provide a "Learning Extension"**. Create a *similar* example problem (change the numbers slightly) and solve it briefly to verify the student can apply the method.
+5.  **Learning Extension**: Create a *similar* example problem (change the numbers slightly) and solve it briefly.
 6.  **Formatting**: 
     *   Use Markdown for text structure.
+    *   **CRITICAL**: Do NOT put spaces between asterisks and text for bolding (e.g., use **Bold**, NOT ** Bold **).
     *   **CRITICAL**: Use LaTeX for ALL mathematical expressions.
     *   Wrap **inline** math in single dollar signs, e.g., $x^2 + y^2 = z^2$.
     *   Wrap **block** math (centered equations) in double dollar signs, e.g., $$ \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a} $$.
@@ -29,8 +30,9 @@ const SYSTEM_INSTRUCTION_ZH = `
 3. **逐步解答**：展示每一个逻辑步骤、计算过程和推理依据。使用简单易懂的语言。
 4. **解释“为什么”**：不要只列出数字；解释所使用的公式或定理。
 5. **举一反三**：创建一个*相似*的例题（稍微改动数字）并简要解答，以验证学生是否掌握了方法。
-6. **格式化**：
+6. **格式化要求**：
     *   使用 Markdown 进行文本排版。
+    *   **关键**：使用加粗时，星号与文字之间**绝不能有空格**（例如：使用 **重点**，而不是 ** 重点 **）。
     *   **关键**：所有的数学公式必须使用 LaTeX 格式。
     *   **行内公式**请使用单美元符号包裹，例如：$x + y = 10$。
     *   **独立公式块**请使用双美元符号包裹，例如：$$ \\sum_{i=1}^n i = \\frac{n(n+1)}{2} $$。
@@ -68,8 +70,8 @@ export const solveMathProblem = async (base64Image: string, lang: Language): Pro
           },
           {
             text: isZh 
-              ? "请帮我解答这道数学题。请务必使用LaTeX格式（$和$$）来书写所有数学公式。"
-              : "Please solve this math problem for me. Make sure to use LaTeX format ($ and $$) for all math formulas."
+              ? "请帮我解答这道数学题。请务必使用LaTeX格式（$和$$）来书写所有数学公式。Markdown加粗时请勿包含空格。"
+              : "Please solve this math problem for me. Make sure to use LaTeX format ($ and $$) for all math formulas. Do not include spaces within bold markdown tags."
           }
         ]
       },
