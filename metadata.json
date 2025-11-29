@@ -1,0 +1,7 @@
+{
+  "name": "MathSnap Tutor",
+  "description": "An intelligent math tutor that solves problems from photos using Gemini 3 Pro, providing step-by-step explanations and similar examples.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
