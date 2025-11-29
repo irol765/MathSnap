@@ -3,6 +3,7 @@ import { AppState, Language, MathResponse } from './types';
 import { solveMathProblem, fileToBase64 } from './services/geminiService';
 import { ImageInput } from './components/ImageInput';
 import { SolutionView } from './components/SolutionView';
+import { AccessGate } from './components/AccessGate';
 import { Icons } from './components/Icon';
 
 const TRANSLATIONS = {
@@ -61,9 +62,32 @@ export default function App() {
   const [response, setResponse] = useState<MathResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  // Security Gate State
+  const [isVerified, setIsVerified] = useState<boolean>(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   const t = TRANSLATIONS[language];
-  
   const [loadingText, setLoadingText] = useState(t.analyzingTitle);
+
+  // Check for Access Code on mount
+  useEffect(() => {
+    const requiredCode = process.env.ACCESS_CODE;
+    
+    if (!requiredCode) {
+      // No code configured in env, allow access
+      setIsVerified(true);
+      setCheckingAuth(false);
+      return;
+    }
+
+    const savedToken = localStorage.getItem('mathsnap_access_token');
+    if (savedToken === requiredCode) {
+      setIsVerified(true);
+    } else {
+      setIsVerified(false);
+    }
+    setCheckingAuth(false);
+  }, []);
 
   useEffect(() => {
     setLoadingText(t.analyzingTitle);
@@ -114,6 +138,20 @@ export default function App() {
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'en' ? 'zh' : 'en');
   };
+
+  // While checking local storage, show nothing or a spinner
+  if (checkingAuth) return null;
+
+  // If locked, show the gate
+  if (!isVerified) {
+    return (
+      <AccessGate 
+        onUnlock={() => setIsVerified(true)} 
+        lang={language} 
+        onLanguageToggle={toggleLanguage} 
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">

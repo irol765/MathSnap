@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => {
       // This is crucial: it replaces 'process.env.API_KEY' in your client code 
       // with the actual string value from the environment variable during build.
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
+      // Inject the optional Access Code for the security gate
+      'process.env.ACCESS_CODE': JSON.stringify(env.ACCESS_CODE || ''),
     },
     build: {
       outDir: 'dist',
