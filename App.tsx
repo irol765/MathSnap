@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AppState, Language } from './types';
+import { AppState, Language, MathResponse } from './types';
 import { solveMathProblem, fileToBase64 } from './services/geminiService';
 import { ImageInput } from './components/ImageInput';
 import { SolutionView } from './components/SolutionView';
@@ -24,8 +24,8 @@ const TRANSLATIONS = {
       "Understanding concepts...",
       "Calculations in progress...",
       "Formulating explanation...",
-      "Double-checking math...",
-      "Writing detailed steps..."
+      "Creating practice quiz...",
+      "Double-checking math..."
     ]
   },
   zh: {
@@ -46,8 +46,8 @@ const TRANSLATIONS = {
       "正在理解概念...",
       "正在计算...",
       "正在组织讲解...",
-      "正在复查结果...",
-      "正在撰写详细步骤..."
+      "正在生成互动测验...",
+      "正在复查结果..."
     ]
   }
 };
@@ -56,15 +56,15 @@ export default function App() {
   const [appState, setAppState] = useState<AppState>(AppState.IDLE);
   const [language, setLanguage] = useState<Language>('zh');
   const [currentImage, setCurrentImage] = useState<string | null>(null);
-  const [solution, setSolution] = useState<string>("");
+  
+  // Update state to hold the MathResponse object
+  const [response, setResponse] = useState<MathResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   
   const t = TRANSLATIONS[language];
   
-  // To handle the visual "Thinking" text that updates occasionally
   const [loadingText, setLoadingText] = useState(t.analyzingTitle);
 
-  // Reset loading text when language changes or state changes
   useEffect(() => {
     setLoadingText(t.analyzingTitle);
   }, [language, appState, t.analyzingTitle]);
@@ -88,17 +88,17 @@ export default function App() {
     try {
       setAppState(AppState.ANALYZING);
       setError(null);
+      setResponse(null); // Clear previous response
       
-      // 1. Convert for display and sending
       const base64 = await fileToBase64(file);
       setCurrentImage(base64);
 
-      // 2. Call Gemini with selected language
       const result = await solveMathProblem(base64, language);
-      setSolution(result);
+      setResponse(result);
       setAppState(AppState.SUCCESS);
 
     } catch (err: any) {
+      console.error(err);
       setError(err.message || t.errorGeneric);
       setAppState(AppState.ERROR);
     }
@@ -107,7 +107,7 @@ export default function App() {
   const handleReset = () => {
     setAppState(AppState.IDLE);
     setCurrentImage(null);
-    setSolution("");
+    setResponse(null);
     setError(null);
   };
 
@@ -124,7 +124,6 @@ export default function App() {
             <div className="bg-indigo-600 p-1.5 rounded-lg flex-shrink-0">
                <span className="text-white font-bold text-xl leading-none">∑</span>
             </div>
-            {/* Optimized title for mobile: text-lg on mobile, text-xl on desktop, truncate to prevent overflow */}
             <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent truncate">
               {t.title}
             </h1>
@@ -150,7 +149,7 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 flex flex-col items-center justify-center">
         
-        {/* State: IDLE - Show Input */}
+        {/* State: IDLE */}
         {appState === AppState.IDLE && (
           <div className="w-full flex flex-col items-center animate-fade-in">
             <div className="text-center mb-10 max-w-lg">
@@ -165,7 +164,7 @@ export default function App() {
           </div>
         )}
 
-        {/* State: ANALYZING - Show Loading UI */}
+        {/* State: ANALYZING */}
         {appState === AppState.ANALYZING && (
           <div className="w-full flex flex-col items-center justify-center py-12 animate-fade-in">
             <div className="relative w-64 h-64 md:w-80 md:h-80 mb-8 rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
@@ -190,7 +189,7 @@ export default function App() {
           </div>
         )}
 
-        {/* State: ERROR - Show Error Message */}
+        {/* State: ERROR */}
         {appState === AppState.ERROR && (
           <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl text-center animate-fade-in">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600">
@@ -209,8 +208,8 @@ export default function App() {
           </div>
         )}
 
-        {/* State: SUCCESS - Show Solution */}
-        {appState === AppState.SUCCESS && (
+        {/* State: SUCCESS */}
+        {appState === AppState.SUCCESS && response && (
           <div className="w-full animate-fade-in">
             <div className="mb-6 flex justify-center">
                <div className="w-full max-w-3xl flex items-center justify-between mb-4 px-2">
@@ -226,7 +225,8 @@ export default function App() {
                  </span>
                </div>
             </div>
-            <SolutionView markdown={solution} onReset={handleReset} lang={language} />
+            {/* Pass the full response object to SolutionView */}
+            <SolutionView response={response} onReset={handleReset} lang={language} />
           </div>
         )}
       </main>

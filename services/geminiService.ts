@@ -1,46 +1,85 @@
 import { GoogleGenAI } from "@google/genai";
-import { Language } from "../types";
+import { Language, MathResponse } from "../types";
 
 const SYSTEM_INSTRUCTION_EN = `
 You are an expert, patient, and encouraging math tutor designed for students.
-Your goal is to help students understand math problems deeply, not just give the answer.
+Your goal is to help students understand math problems deeply through interactive learning.
 
 When provided with an image of a math problem:
 1.  **Analyze the image** to identify the mathematical problem.
-2.  **Restate the problem** clearly in text format so the student knows you understood it.
-3.  **Solve the problem step-by-step**. Show every logical step, calculation, and reasoning. Use clear, simple language.
-4.  **Explain the "Why"**. Don't just show numbers; explain the formulas or theorems being used.
-5.  **Learning Extension**: Create a *similar* example problem (change the numbers slightly) and solve it briefly.
-6.  **Formatting**: 
-    *   Use Markdown for text structure.
-    *   **CRITICAL**: Do NOT put spaces between asterisks and text for bolding (e.g., use **Bold**, NOT ** Bold **).
-    *   **CRITICAL**: Use LaTeX for ALL mathematical expressions.
-    *   Wrap **inline** math in single dollar signs, e.g., $x^2 + y^2 = z^2$.
-    *   Wrap **block** math (centered equations) in double dollar signs, e.g., $$ \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a} $$.
-    *   Use bolding for key terms.
+2.  **Solve the problem step-by-step** in the "explanation" field.
+    *   Restate the problem.
+    *   Show logical steps, calculation, and reasoning.
+    *   Explain the "Why" (formulas/theorems).
+    *   Use Markdown and LaTeX.
+3.  **Create an Interactive Quiz** in the "quiz" field.
+    *   Create a *similar* problem (change numbers/context) to test understanding.
+    *   Provide 4 multiple-choice options.
+    *   Identify the correct index (0-3).
+    *   Provide a brief explanation for the quiz solution.
+
+**OUTPUT FORMAT**:
+You must return a valid **JSON object**.
+Structure:
+{
+  "explanation": "Markdown string containing the step-by-step solution...",
+  "quiz": {
+    "question": "Markdown string for the quiz question...",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctIndex": 0, // Integer 0-3
+    "explanation": "Markdown string explaining the quiz answer..."
+  }
+}
+
+**CRITICAL FORMATTING RULES**:
+1.  **JSON**: The output must be valid JSON.
+2.  **LaTeX in JSON**: Because this is a JSON string, you must **DOUBLE ESCAPE** backslashes for LaTeX. 
+    *   Example: Use \`\\\\frac{1}{2}\` instead of \`\\frac{1}{2}\`.
+    *   Example: Use \`\\\\sqrt{x}\` instead of \`\\sqrt{x}\`.
+    *   Inline math: \`$ ... $\`. Block math: \`$$ ... $$\`.
+3.  **Markdown**: Do NOT put spaces inside bold tags (e.g., use **Bold**, NOT ** Bold **).
 `;
 
 const SYSTEM_INSTRUCTION_ZH = `
 你是一位专家级、耐心且善于鼓励学生的数学导师。
-你的目标是帮助学生深入理解数学问题，而不仅仅是给出答案。
+你的目标是通过互动学习帮助学生深入理解数学问题。
 
 当收到一张数学题目的图片时：
-1. **分析图片**：识别图片中的数学问题。
-2. **重述问题**：用清晰的文字重述题目，确保学生知道你正确理解了题目。
-3. **逐步解答**：展示每一个逻辑步骤、计算过程和推理依据。使用简单易懂的语言。
-4. **解释“为什么”**：不要只列出数字；解释所使用的公式或定理。
-5. **举一反三**：创建一个*相似*的例题（稍微改动数字）并简要解答，以验证学生是否掌握了方法。
-6. **格式化要求**：
-    *   使用 Markdown 进行文本排版。
-    *   **关键**：使用加粗时，星号与文字之间**绝不能有空格**（例如：使用 **重点**，而不是 ** 重点 **）。
-    *   **关键**：所有的数学公式必须使用 LaTeX 格式。
-    *   **行内公式**请使用单美元符号包裹，例如：$x + y = 10$。
-    *   **独立公式块**请使用双美元符号包裹，例如：$$ \\sum_{i=1}^n i = \\frac{n(n+1)}{2} $$。
-    *   关键步骤请加粗。
+1.  **分析图片**：识别数学问题。
+2.  **逐步解答**：在 "explanation" 字段中提供解答。
+    *   重述题目。
+    *   展示逻辑步骤、计算过程和推理。
+    *   解释原理（公式/定理）。
+    *   使用 Markdown 和 LaTeX。
+3.  **创建互动测验**：在 "quiz" 字段中创建一个测验。
+    *   创建一个*相似*的题目（修改数字或情境）来测试学生的掌握程度。
+    *   提供 4 个选项。
+    *   指出正确选项的索引 (0-3)。
+    *   提供测验的简要解析。
+
+**输出格式**：
+你必须返回一个合法的 **JSON 对象**。
+结构如下：
+{
+  "explanation": "包含逐步解答的 Markdown 字符串...",
+  "quiz": {
+    "question": "测验题目的 Markdown 字符串...",
+    "options": ["选项 A", "选项 B", "选项 C", "选项 D"],
+    "correctIndex": 0, // 整数 0-3
+    "explanation": "解释测验答案的 Markdown 字符串..."
+  }
+}
+
+**关键格式规则**：
+1.  **JSON**：必须输出合法的 JSON。
+2.  **JSON 中的 LaTeX**：由于是在 JSON 字符串中，你必须对 LaTeX 的反斜杠进行**双重转义**。
+    *   例如：使用 \`\\\\frac{1}{2}\` 而不是 \`\\frac{1}{2}\`。
+    *   例如：使用 \`\\\\sqrt{x}\` 而不是 \`\\sqrt{x}\`。
+    *   行内公式：\`$ ... $\`。块级公式：\`$$ ... $$\`。
+3.  **Markdown**：加粗标签内**绝不能有空格**（例如：使用 **重点**，而不是 ** 重点 **）。
 `;
 
-export const solveMathProblem = async (base64Image: string, lang: Language): Promise<string> => {
-  // Check for API Key explicitly to prevent white screens/silent failures
+export const solveMathProblem = async (base64Image: string, lang: Language): Promise<MathResponse> => {
   const apiKey = process.env.API_KEY;
   const isZh = lang === 'zh';
 
@@ -56,32 +95,30 @@ export const solveMathProblem = async (base64Image: string, lang: Language): Pro
   try {
     const ai = new GoogleGenAI({ apiKey: apiKey });
 
-    // We use gemini-3-pro-preview for complex reasoning capabilities ("Thinking")
-    // which is excellent for Step-by-Step Math logic.
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: {
         parts: [
           {
             inlineData: {
-              mimeType: 'image/jpeg', // Assuming JPEG from camera/canvas, but API handles common types
+              mimeType: 'image/jpeg',
               data: base64Image
             }
           },
           {
             text: isZh 
-              ? "请帮我解答这道数学题。请务必使用LaTeX格式（$和$$）来书写所有数学公式。Markdown加粗时请勿包含空格。"
-              : "Please solve this math problem for me. Make sure to use LaTeX format ($ and $$) for all math formulas. Do not include spaces within bold markdown tags."
+              ? "请分析图片并按要求输出 JSON。"
+              : "Please analyze the image and output JSON as requested."
           }
         ]
       },
       config: {
         systemInstruction: isZh ? SYSTEM_INSTRUCTION_ZH : SYSTEM_INSTRUCTION_EN,
-        // Enable thinking for better reasoning on complex math
+        responseMimeType: 'application/json', // Force JSON output
         thinkingConfig: {
           thinkingBudget: 2048 
         },
-        temperature: 0.2, // Low temperature for precision in math
+        temperature: 0.2,
       }
     });
 
@@ -89,10 +126,23 @@ export const solveMathProblem = async (base64Image: string, lang: Language): Pro
       throw new Error(isZh ? "无法生成解释。" : "No explanation generated.");
     }
 
-    return response.text;
+    // Parse JSON response
+    try {
+      const jsonResponse = JSON.parse(response.text) as MathResponse;
+      
+      // Basic validation
+      if (!jsonResponse.explanation || !jsonResponse.quiz) {
+        throw new Error("Invalid JSON structure");
+      }
+      
+      return jsonResponse;
+    } catch (parseError) {
+      console.error("JSON Parse Error:", parseError, "Raw text:", response.text);
+      throw new Error(isZh ? "AI 返回数据格式错误。" : "Failed to parse AI response.");
+    }
+
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    // Pass through specific configuration errors, otherwise generic error
     if (error.message.includes("API_KEY")) {
       throw error;
     }
@@ -106,7 +156,6 @@ export const fileToBase64 = (file: File): Promise<string> => {
     reader.readAsDataURL(file);
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
         const base64 = reader.result.split(',')[1];
         resolve(base64);
       } else {
