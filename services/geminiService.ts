@@ -14,6 +14,7 @@ When provided with an image of a math problem:
     *   Use Markdown and LaTeX.
 3.  **Create an Interactive Quiz** in the "quiz" field.
     *   Create a *similar* problem (change numbers/context) to test understanding.
+    *   **CRITICAL**: The quiz question must be strictly **text-based** and solvable **WITHOUT** an image. Do NOT refer to "the figure", "the diagram", or "as shown". If it is a geometry problem, describe the shape and values fully in text (e.g., "In a right triangle ABC where angle C is 90 degrees...").
     *   Provide 4 multiple-choice options.
     *   Identify the correct index (0-3).
     *   Provide a brief explanation for the quiz solution.
@@ -24,7 +25,7 @@ Structure:
 {
   "explanation": "Markdown string containing the step-by-step solution...",
   "quiz": {
-    "question": "Markdown string for the quiz question...",
+    "question": "Markdown string for the quiz question (NO image references)...",
     "options": ["Option A", "Option B", "Option C", "Option D"],
     "correctIndex": 0, // Integer 0-3
     "explanation": "Markdown string explaining the quiz answer..."
@@ -53,6 +54,7 @@ const SYSTEM_INSTRUCTION_ZH = `
     *   使用 Markdown 和 LaTeX。
 3.  **创建互动测验**：在 "quiz" 字段中创建一个测验。
     *   创建一个*相似*的题目（修改数字或情境）来测试学生的掌握程度。
+    *   **关键要求**：生成的测验题目必须是**纯文字描述**，**绝不能依赖图片**（因为用户看不到测验的图片）。切勿包含“如图所示”、“看图”等表述。如果是几何题，必须用文字完整描述所有必要条件（例如：“在直角三角形ABC中，角C为90度...”）。
     *   提供 4 个选项。
     *   指出正确选项的索引 (0-3)。
     *   提供测验的简要解析。
@@ -63,7 +65,7 @@ const SYSTEM_INSTRUCTION_ZH = `
 {
   "explanation": "包含逐步解答的 Markdown 字符串...",
   "quiz": {
-    "question": "测验题目的 Markdown 字符串...",
+    "question": "测验题目的 Markdown 字符串（不可引用图片）...",
     "options": ["选项 A", "选项 B", "选项 C", "选项 D"],
     "correctIndex": 0, // 整数 0-3
     "explanation": "解释测验答案的 Markdown 字符串..."
