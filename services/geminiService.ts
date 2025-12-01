@@ -83,19 +83,21 @@ export const solveMathProblem = async (base64Image: string, lang: Language): Pro
   let apiBaseUrl = process.env.API_BASE_URL; 
   const isZh = lang === 'zh';
 
-  // Debug log to help users verify their config
+  // Enhanced Debug log to help users verify their config
   console.log("Gemini Service Config:", { 
-    hasKey: !!apiKey, 
-    keyPrefix: apiKey?.substring(0, 4) + "...", 
-    baseUrl: apiBaseUrl || "(Default Google)" 
+    hasKey: !!apiKey,
+    keyLength: apiKey?.length || 0,
+    keyPrefix: apiKey ? apiKey.substring(0, 4) + "..." : "None", 
+    baseUrl: apiBaseUrl || "(Default Google)",
+    model: 'gemini-3-pro-preview'
   });
 
   if (!apiKey) {
-    console.error("API_KEY is missing in process.env");
+    console.error("API_KEY is missing. Environment variables might not be injected correctly.");
     throw new Error(
       isZh 
-        ? "系统未配置 API Key。请在部署平台（如 Vercel）的环境变量中设置 API_KEY。" 
-        : "API Key not configured. Please set API_KEY in your environment variables."
+        ? "系统未配置 API Key。请检查 Vercel 环境变量设置，并确保已重新部署 (Redeploy)。" 
+        : "API Key not configured. Please check Vercel environment variables and Redeploy."
     );
   }
 
@@ -140,7 +142,7 @@ export const solveMathProblem = async (base64Image: string, lang: Language): Pro
     });
 
     if (!response.text) {
-      throw new Error(isZh ? "无法生成解释。" : "No explanation generated.");
+      throw new Error(isZh ? "无法生成解释 (响应为空)。" : "No explanation generated (empty response).");
     }
 
     // Parse JSON response
@@ -160,36 +162,48 @@ export const solveMathProblem = async (base64Image: string, lang: Language): Pro
       return jsonResponse;
     } catch (parseError) {
       console.error("JSON Parse Error:", parseError, "Raw text:", response.text);
-      throw new Error(isZh ? "AI 返回数据格式错误。" : "Failed to parse AI response.");
+      throw new Error(isZh ? "AI 返回数据格式错误，请重试。" : "Failed to parse AI response.");
     }
 
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     
-    const msg = error.message || error.toString();
+    const msg = (error.message || error.toString()).toLowerCase();
 
-    // 1. Handle API Key errors specifically
-    if (msg.includes("API key not valid") || msg.includes("API_KEY_INVALID")) {
-      // Diagnostic check: User has a Proxy Key (sk-...) but Base URL is empty/default
+    // 1. Handle API Key errors specifically (401 / Invalid Key)
+    if (msg.includes("key") || msg.includes("401") || msg.includes("unauthenticated")) {
       if (apiKey?.startsWith("sk-") && !apiBaseUrl) {
         const errorMsg = isZh
-          ? "API Key 无效。检测到您使用的是代理 Key (sk-...)，但未配置 API_BASE_URL。如果您已在 Vercel 添加了变量，请务必执行 Redeploy (重新部署) 以使其生效。"
-          : "Invalid API Key. You are using a proxy key (sk-...) but API_BASE_URL is not active. If you added the variable in Vercel, you MUST Redeploy for it to take effect.";
+          ? "API Key 无效。检测到您使用的是代理 Key (sk-...)，但未配置 API_BASE_URL。请在 Vercel 环境变量中添加 API_BASE_URL 并重新部署。"
+          : "Invalid API Key. You are using a proxy key (sk-...) but API_BASE_URL is not active. Please configure API_BASE_URL.";
         throw new Error(errorMsg);
       }
-      
-      throw new Error(isZh ? "API Key 无效，请检查配置。" : "API Key is invalid.");
+      throw new Error(isZh ? "API Key 无效或未授权 (401)。请检查配置。" : "API Key is invalid or unauthorized (401).");
     }
 
-    // 2. Handle Network/Fetch errors (common with Firewall/GFW or AdBlockers)
-    if (msg.includes("Load failed") || msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+    // 2. Handle Model Not Found (404) - Common if provider doesn't support the specific model
+    if (msg.includes("404") || msg.includes("not found")) {
+      throw new Error(isZh 
+        ? "模型未找到 (404)。可能是您的 API 提供商不支持 'gemini-3-pro-preview' 模型。" 
+        : "Model not found (404). 'gemini-3-pro-preview' might not be supported by your provider.");
+    }
+
+    // 3. Handle Thinking Config errors (400) - Some proxies/models don't support thinkingConfig
+    if (msg.includes("thinking") || msg.includes("invalid argument") || msg.includes("400")) {
+      throw new Error(isZh
+        ? "参数错误 (400)。可能是您的 API 提供商不支持思考模型配置 (thinkingConfig)。"
+        : "Invalid Argument (400). Your provider may not support 'thinkingConfig'.");
+    }
+
+    // 4. Handle Network/Fetch errors
+    if (msg.includes("load failed") || msg.includes("fetch") || msg.includes("network")) {
        const networkErrorMsg = isZh 
-         ? "网络连接失败。请检查：1. 是否开启代理/VPN（如在中国大陆）；2. API_BASE_URL 是否正确；3. Vercel 是否已重新部署。"
-         : "Network request failed. Please check: 1. VPN connection; 2. API_BASE_URL configuration; 3. Ensure you have Redeployed Vercel.";
+         ? "网络连接失败。请检查：1. 代理/VPN 设置；2. API_BASE_URL 是否正确；3. Vercel 是否已重新部署。"
+         : "Network request failed. Please check: 1. Connection/VPN; 2. API_BASE_URL configuration; 3. Ensure you have Redeployed.";
        throw new Error(networkErrorMsg);
     }
 
-    throw new Error(msg || "Failed to analyze the image.");
+    throw new Error(isZh ? "分析失败，请稍后重试。" : "Failed to analyze the image.");
   }
 };
 
