@@ -15,6 +15,8 @@ export default defineConfig(({ mode }) => {
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
       // Inject the optional Access Code for the security gate
       'process.env.ACCESS_CODE': JSON.stringify(env.ACCESS_CODE || ''),
+      // Inject the optional API Base URL for custom providers/proxies
+      'process.env.API_BASE_URL': JSON.stringify(env.API_BASE_URL || ''),
     },
     build: {
       outDir: 'dist',

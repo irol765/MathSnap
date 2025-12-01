@@ -80,6 +80,7 @@ const SYSTEM_INSTRUCTION_ZH = `
 
 export const solveMathProblem = async (base64Image: string, lang: Language): Promise<MathResponse> => {
   const apiKey = process.env.API_KEY;
+  const apiBaseUrl = process.env.API_BASE_URL; // Get custom base URL if defined
   const isZh = lang === 'zh';
 
   if (!apiKey) {
@@ -92,7 +93,14 @@ export const solveMathProblem = async (base64Image: string, lang: Language): Pro
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey: apiKey });
+    // Configure client with optional baseUrl
+    const clientConfig: any = { apiKey: apiKey };
+    if (apiBaseUrl) {
+      // The SDK uses 'baseUrl' to override the default Google endpoint
+      clientConfig.baseUrl = apiBaseUrl;
+    }
+
+    const ai = new GoogleGenAI(clientConfig);
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
@@ -157,8 +165,8 @@ export const solveMathProblem = async (base64Image: string, lang: Language): Pro
     const msg = error.message || error.toString();
     if (msg.includes("Load failed") || msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
        const networkErrorMsg = isZh 
-         ? "网络连接失败。请检查您的网络设置（中国大陆用户需使用代理/VPN）或确认 API Key 是否正确。"
-         : "Network request failed. Please check your internet connection (VPN may be required in some regions) or verify your API Key.";
+         ? "网络连接失败。请检查：1. 是否开启代理/VPN（如在中国大陆）；2. API Base URL 是否正确；3. API Key 是否有效。"
+         : "Network request failed. Please check: 1. Your VPN connection (if in a restricted region); 2. The API Base URL configuration; 3. Validity of your API Key.";
        throw new Error(networkErrorMsg);
     }
 

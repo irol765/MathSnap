@@ -17,6 +17,7 @@
 *   **LaTeX Rendering**: Professional rendering for math and scientific formulas.
 *   **PWA Support**: Installable on iOS and Android for a native app-like experience.
 *   **Access Control**: Optional security code to prevent unauthorized usage.
+*   **Custom API Provider**: Support for custom Gemini API endpoints (proxies) for users in restricted regions.
 
 ## Deployment (Vercel)
 
@@ -34,6 +35,7 @@ This project is optimized for Vercel.
 3.  In **Environment Variables**, add:
     *   `API_KEY`: Your Google Gemini API Key.
     *   `ACCESS_CODE` (Optional): A password (e.g., `123456`) to restrict access.
+    *   `API_BASE_URL` (Optional): Custom API endpoint (e.g., `https://your-proxy-domain.com`). Useful if you are using a third-party relay service.
 4.  **Deploy**.
 
 ## Mobile Installation (PWA)
@@ -64,6 +66,7 @@ This project is optimized for Vercel.
     ```env
     API_KEY=your_google_gemini_api_key
     ACCESS_CODE=optional_secret_code
+    API_BASE_URL=https://your-custom-proxy.com # Optional
     ```
 
 4.  Run:

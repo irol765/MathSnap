@@ -17,6 +17,7 @@
 *   **公式渲染**：支持 LaTeX 格式的专业数学/物理公式显示。
 *   **PWA 支持**：支持安装到手机桌面（iOS/Android），体验接近原生应用。
 *   **访问控制**：支持设置安全码（Access Code），防止公开部署后被滥用。
+*   **自定义 API 节点**：支持配置第三方 API 代理地址，解决网络连接问题。
 
 ## 部署方式 (Vercel)
 
@@ -36,13 +37,14 @@
 5.  添加以下环境变量：
     *   **API_KEY** (必填): 粘贴你在 Google AI Studio 获取的 API Key。
     *   **ACCESS_CODE** (选填): 设置一个安全访问码（如 `123456`）。如果设置了此变量，用户打开网页时必须输入正确的代码才能使用服务。
+    *   **API_BASE_URL** (选填): 自定义 API 地址（例如 `https://api.your-proxy.com`）。如果你在中国大陆且没有 VPN，或者使用第三方的 API 中转服务，请配置此项。
 6.  点击 **Deploy**。
 
-### 3. 防止白屏 (Troubleshooting)
+### 3. 防止白屏 / 网络报错 (Troubleshooting)
 
-如果部署后出现白屏，通常是因为：
+如果部署后出现白屏或 "Load failed"，通常是因为：
+*   **网络问题**：如果您在中国大陆，Google 官方 API 可能无法连接。解决方案是配置 `API_BASE_URL` 使用中转服务，或者在设备上开启 VPN。
 *   **API Key 未设置**：请确保在 Vercel 的 Environment Variables 中正确添加了 `API_KEY`。
-*   **构建配置**：本项目设计为标准 React 应用。Vercel 通常会自动检测 (Create React App / Vite)。如果使用 Vite，请确保构建命令为 `vite build`，输出目录为 `dist`。
 
 ## 手机安装 (PWA)
 
@@ -73,6 +75,7 @@
     ```env
     API_KEY=your_google_gemini_api_key_here
     ACCESS_CODE=optional_secret_code
+    API_BASE_URL=https://your-custom-proxy.com # 可选，用于自定义代理地址
     ```
 
 4.  启动开发服务器：
