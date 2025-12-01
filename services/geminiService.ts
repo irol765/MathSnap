@@ -134,7 +134,7 @@ export const solveMathProblem = async (base64Image: string, lang: Language): Pro
         throw new Error("Invalid JSON structure");
       }
       
-      // Fallback for answer if model misses it (unlikely with strict schema, but good for safety)
+      // Fallback for answer if model misses it
       if (!jsonResponse.answer) {
         jsonResponse.answer = isZh ? "见详细解析" : "See explanation below";
       }
@@ -147,9 +147,21 @@ export const solveMathProblem = async (base64Image: string, lang: Language): Pro
 
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    if (error.message.includes("API_KEY")) {
+    
+    // Handle specific API Key error
+    if (error.message?.includes("API_KEY")) {
       throw error;
     }
+
+    // Handle Network/Fetch errors (common with Firewall/GFW or AdBlockers)
+    const msg = error.message || error.toString();
+    if (msg.includes("Load failed") || msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+       const networkErrorMsg = isZh 
+         ? "网络连接失败。请检查您的网络设置（中国大陆用户需使用代理/VPN）或确认 API Key 是否正确。"
+         : "Network request failed. Please check your internet connection (VPN may be required in some regions) or verify your API Key.";
+       throw new Error(networkErrorMsg);
+    }
+
     throw new Error(error.message || "Failed to analyze the image.");
   }
 };
