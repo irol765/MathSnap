@@ -14,13 +14,13 @@ export const ImageInput: React.FC<ImageInputProps> = ({ onImageSelected, isProce
 
   const t = {
     en: {
-      title: "Add a Math Problem",
+      title: "Add a Question",
       subtitle: "Select from Photo Library or Take Photo",
       dragText: "or drag an image here",
       poweredBy: "Powered by Gemini 3 Pro"
     },
     zh: {
-      title: "添加数学题目",
+      title: "添加题目",
       subtitle: "从相册选择或直接拍照",
       dragText: "或者将图片拖放到此处",
       poweredBy: "由 Gemini 3 Pro 驱动"

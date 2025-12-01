@@ -1,76 +1,72 @@
-# MathSnap Tutor (数学拍 - AI 导师)
+[🇨🇳 中文说明 (Chinese Version)](README_ZH.md)
 
-这是一个基于 Google Gemini 3 Pro 模型的智能数学辅导 Web 应用。用户只需上传数学题目的图片，AI 就会识别题目并提供详细的逐步解答、原理解析，并自动生成一道相似的互动测验题供学生巩固练习。
+# StudySnap - AI General Tutor
 
-## 功能特点
+**StudySnap** is an intelligent, all-subject AI tutor powered by **Google Gemini 3 Pro**. Whether it's a math problem, a history event, or a physics concept, simply take a photo, and the AI will provide a detailed explanation and generate a custom **interactive quiz**.
 
-*   **双语支持**：支持中文和英文界面及回答。
-*   **智能图像识别**：直接解析图片中的数学公式和文本。
-*   **详细步骤**：Gemini 3 Pro 提供深度推理，展示完整的解题逻辑。
-*   **互动测验 (New)**：AI 会根据原题生成一道变式选择题，学生作答后可即时获得反馈和解析，实现举一反三。
-*   **公式渲染**：支持 LaTeX 格式的专业数学公式显示。
-*   **PWA 支持**：支持安装到手机桌面（iOS/Android），体验接近原生应用。
-*   **访问控制**：支持设置安全码（Access Code），防止公开部署后被滥用。
+## Features
 
-## 部署方式 (Vercel)
+*   **All Subjects Supported**: Not just Math! Supports Physics, Chemistry, Biology, History, Geography, Literature, English, and more.
+*   **Bilingual Interface**: Seamlessly switch between English and Chinese.
+*   **Smart Image Analysis**: Instantly parses text, formulas, diagrams, and objects from images.
+*   **Deep Explanations**:
+    *   **STEM**: Step-by-step solutions, formula derivations, and logic.
+    *   **Humanities**: Historical context, translations, literary analysis, and summaries.
+*   **Text-Only Interactive Quizzes**: The AI generates a multiple-choice question to test your understanding. 
+    *   **Feature**: The quiz is strictly **text-based** and designed to be answerable without seeing the original image or a new image. This ensures a smooth practice experience even for geometry or map-based questions (which are described in detail textually).
+*   **LaTeX Rendering**: Professional rendering for math and scientific formulas.
+*   **PWA Support**: Installable on iOS and Android for a native app-like experience.
+*   **Access Control**: Optional security code to prevent unauthorized usage.
 
-本项目非常适合部署在 Vercel 上。
+## Deployment (Vercel)
 
-### 1. 准备工作
-*   拥有一个 GitHub 账号。
-*   拥有一个 [Google AI Studio](https://aistudio.google.com/) 账号并获取 API Key。
-*   注册 [Vercel](https://vercel.com/)。
+This project is optimized for Vercel.
 
-### 2. 部署步骤
+### 1. Prerequisites
+*   A GitHub account.
+*   A [Google AI Studio](https://aistudio.google.com/) account (to get an API Key).
+*   A [Vercel](https://vercel.com/) account.
 
-1.  **Fork** 本仓库到你的 GitHub。
-2.  登录 Vercel，点击 **"Add New..."** -> **"Project"**。
-3.  选择刚才 Fork 的 GitHub 仓库并点击 **Import**。
-4.  在 **Configure Project** 页面，找到 **Environment Variables** (环境变量) 部分。
-5.  添加以下环境变量：
-    *   **API_KEY** (必填): 粘贴你在 Google AI Studio 获取的 API Key。
-    *   **ACCESS_CODE** (选填): 设置一个安全访问码（如 `123456`）。如果设置了此变量，用户打开网页时必须输入正确的代码才能使用服务。
-6.  点击 **Deploy**。
+### 2. Steps
 
-### 3. 防止白屏 (Troubleshooting)
+1.  **Fork** this repository.
+2.  Log in to Vercel and **Import** your forked repository.
+3.  In **Environment Variables**, add:
+    *   `API_KEY`: Your Google Gemini API Key.
+    *   `ACCESS_CODE` (Optional): A password (e.g., `123456`) to restrict access.
+4.  **Deploy**.
 
-如果部署后出现白屏，通常是因为：
-*   **API Key 未设置**：请确保在 Vercel 的 Environment Variables 中正确添加了 `API_KEY`。
-*   **构建配置**：本项目设计为标准 React 应用。Vercel 通常会自动检测 (Create React App / Vite)。如果使用 Vite，请确保构建命令为 `vite build`，输出目录为 `dist`。
+## Mobile Installation (PWA)
 
-## 手机安装 (PWA)
-
-### iOS (iPhone/iPad)
-1. 在 Safari 浏览器中打开部署好的网址。
-2. 点击底部的 **分享** 按钮 (方框带箭头)。
-3. 向下滚动并点击 **"添加到主屏幕" (Add to Home Screen)**。
-4. *注意：* 如果遇到启动白屏问题，请尝试删除桌面图标，清除 Safari 缓存后重新添加。
+### iOS
+1. Open the site in Safari.
+2. Tap the **Share** button.
+3. Tap **Add to Home Screen**.
 
 ### Android
-1. 在 Chrome 浏览器中打开网址。
-2. 点击右上角菜单，选择 **"安装应用"** 或 **"添加到主屏幕"**。
+1. Open the site in Chrome.
+2. Tap the menu (three dots) and select **Install App** or **Add to Home Screen**.
 
-## 本地开发
+## Local Development
 
-1.  克隆仓库：
+1.  Clone the repo:
     ```bash
     git clone [your-repo-url]
-    cd mathsnap
+    cd studysnap
     ```
 
-2.  安装依赖：
+2.  Install dependencies:
     ```bash
     npm install
     ```
 
-3.  设置环境变量：
-    在根目录创建 `.env` 文件，并添加：
+3.  Create a `.env` file:
     ```env
-    API_KEY=your_google_gemini_api_key_here
+    API_KEY=your_google_gemini_api_key
     ACCESS_CODE=optional_secret_code
     ```
 
-4.  启动开发服务器：
+4.  Run:
     ```bash
     npm run dev
     ```

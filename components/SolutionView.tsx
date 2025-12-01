@@ -19,11 +19,11 @@ export const SolutionView: React.FC<SolutionViewProps> = ({ response, onReset, l
   const t = {
     en: {
       header: "Tutor Solution",
-      refreshLabel: "Solve another problem",
+      refreshLabel: "Solve another",
       promptNext: "Ready to try another one?",
-      buttonNext: "Scan Next Problem",
+      buttonNext: "Scan Next Question",
       quizTitle: "Test Your Knowledge",
-      quizSubtitle: "Try this similar problem to see if you understood!",
+      quizSubtitle: "Try this question to see if you understood the concept!",
       correct: "Correct!",
       incorrect: "Not quite. The correct answer is:",
       explanation: "Explanation:",
@@ -35,7 +35,7 @@ export const SolutionView: React.FC<SolutionViewProps> = ({ response, onReset, l
       promptNext: "准备好尝试下一题了吗？",
       buttonNext: "拍摄下一题",
       quizTitle: "互动测验",
-      quizSubtitle: "尝试解答这道相似的题目，看看你学会了吗！",
+      quizSubtitle: "尝试解答这个问题，看看你掌握知识点了吗！",
       correct: "回答正确！🎉",
       incorrect: "不太对哦。正确答案是：",
       explanation: "解析：",
