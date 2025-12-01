@@ -7,77 +7,45 @@
 
 ## Features
 
-*   **All Subjects Supported**: Not just Math! Supports Physics, Chemistry, Biology, History, Geography, Literature, English, and more.
-*   **Bilingual Interface**: Seamlessly switch between English and Chinese.
+*   **All Subjects Supported**: Math, Physics, Chemistry, History, Literature, and more.
+*   **Dual API Mode**: Automatically switches between Google Native SDK and OpenAI-compatible API based on configuration.
 *   **Smart Image Analysis**: Instantly parses text, formulas, diagrams, and objects from images.
-*   **Deep Explanations**:
-    *   **STEM**: Step-by-step solutions, formula derivations, and logic.
-    *   **Humanities**: Historical context, translations, literary analysis, and summaries.
-*   **Text-Only Interactive Quizzes**: The AI generates a multiple-choice question to test your understanding. 
-    *   **Feature**: The quiz is strictly **text-based** and designed to be answerable without seeing the original image or a new image. This ensures a smooth practice experience even for geometry or map-based questions (which are described in detail textually).
-*   **LaTeX Rendering**: Professional rendering for math and scientific formulas.
+*   **Deep Explanations**: Step-by-step solutions and comprehensive analysis.
+*   **Interactive Quizzes**: AI generates text-based multiple-choice questions to test understanding.
 *   **PWA Support**: Installable on iOS and Android for a native app-like experience.
-*   **Access Control**: Optional security code to prevent unauthorized usage.
-*   **Custom API Provider**: Support for custom Gemini API endpoints (proxies) for users in restricted regions.
+
+## API Configuration Strategies (Important)
+
+This app supports two modes of operation based on your environment variables:
+
+### Mode A: Google Native (Default)
+Uses the official Google GenAI SDK. Best for users with direct access to Google API.
+*   **Required**: `API_KEY` (Your Google Studio API Key)
+*   **Leave Empty**: `API_BASE_URL`
+
+### Mode B: OpenAI Compatible (Proxy/NewAPI)
+Uses the OpenAI Chat Completion format (`/v1/chat/completions`). Best for users using **NewAPI**, **OneAPI**, or other proxies that do not support the native Google SDK format.
+*   **Required**: `API_KEY` (Your Proxy Key, usually starts with `sk-`)
+*   **Required**: `API_BASE_URL` (e.g., `https://api.your-proxy.com/v1`)
+    *   *Note: When this is set, the app switches to standard `fetch` calls using the OpenAI JSON schema.*
 
 ## Deployment (Vercel)
 
-This project is optimized for Vercel.
-
-### 1. Prerequisites
-*   A GitHub account.
-*   A [Google AI Studio](https://aistudio.google.com/) account (to get an API Key).
-*   A [Vercel](https://vercel.com/) account.
-
-### 2. Steps
-
 1.  **Fork** this repository.
-2.  Log in to Vercel and **Import** your forked repository.
-3.  In **Environment Variables**, add:
-    *   `API_KEY`: Your Google Gemini API Key.
-    *   `ACCESS_CODE` (Optional): A password (e.g., `123456`) to restrict access.
-    *   `API_BASE_URL` (Optional): Custom API endpoint. **Required if you are using a third-party proxy** (e.g., `https://api.your-proxy.com`).
+2.  **Import** into Vercel.
+3.  **Environment Variables**:
+    *   `API_KEY`: Your API Key.
+    *   `API_BASE_URL` (Optional): Set this **ONLY** if you are using an OpenAI-compatible proxy.
+    *   `ACCESS_CODE` (Optional): Password to lock the app.
 4.  **Deploy**.
 
-### ⚠️ IMPORTANT: Updating Variables
-If you add or change `API_BASE_URL` or `API_KEY` after the initial deployment, you **MUST Redeploy** for the changes to take effect in the app.
-*   Go to Vercel Dashboard -> Deployments -> Click the 3 dots on the latest deployment -> **Redeploy**.
+### ⚠️ Updating Variables
+If you change `API_BASE_URL` or `API_KEY` after deployment, you **MUST Redeploy** the project in Vercel for changes to take effect.
 
 ## Mobile Installation (PWA)
 
-### iOS
-1. Open the site in Safari.
-2. Tap the **Share** button.
-3. Tap **Add to Home Screen**.
-
-### Android
-1. Open the site in Chrome.
-2. Tap the menu (three dots) and select **Install App** or **Add to Home Screen**.
-
-## Local Development
-
-1.  Clone the repo:
-    ```bash
-    git clone [your-repo-url]
-    cd studysnap
-    ```
-
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-
-3.  Create a `.env` file:
-    ```env
-    API_KEY=your_key_here
-    ACCESS_CODE=optional_code
-    API_BASE_URL=https://your-proxy.com # Optional
-    ```
-
-4.  Run:
-    ```bash
-    npm run dev
-    ```
+*   **iOS**: Safari -> Share -> Add to Home Screen.
+*   **Android**: Chrome -> Menu -> Install App.
 
 ---
-Powered by Google Gemini API
+Powered by Gemini Models

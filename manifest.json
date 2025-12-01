@@ -1,14 +1,14 @@
 {
-  "short_name": "MathSnap",
-  "name": "MathSnap AI Tutor",
+  "short_name": "StudySnap",
+  "name": "StudySnap AI Tutor",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/4392/4392524.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/10473/10473617.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/4392/4392524.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/10473/10473617.png",
       "type": "image/png",
       "sizes": "512x512"
     }
