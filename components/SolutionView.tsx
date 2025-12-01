@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -18,24 +19,26 @@ export const SolutionView: React.FC<SolutionViewProps> = ({ response, onReset, l
 
   const t = {
     en: {
-      header: "Tutor Solution",
+      block1Title: "The Answer",
+      block2Title: "Detailed Analysis",
+      block3Title: "Practice",
+      block3Subtitle: "Test your understanding",
       refreshLabel: "Solve another",
       promptNext: "Ready to try another one?",
       buttonNext: "Scan Next Question",
-      quizTitle: "Test Your Knowledge",
-      quizSubtitle: "Try this question to see if you understood the concept!",
       correct: "Correct!",
       incorrect: "Not quite. The correct answer is:",
       explanation: "Explanation:",
       selectOption: "Select an option:"
     },
     zh: {
-      header: "AI 导师解答",
+      block1Title: "最终答案",
+      block2Title: "详细解析",
+      block3Title: "练一练",
+      block3Subtitle: "巩固知识点",
       refreshLabel: "解答下一题",
       promptNext: "准备好尝试下一题了吗？",
       buttonNext: "拍摄下一题",
-      quizTitle: "互动测验",
-      quizSubtitle: "尝试解答这个问题，看看你掌握知识点了吗！",
       correct: "回答正确！🎉",
       incorrect: "不太对哦。正确答案是：",
       explanation: "解析：",
@@ -53,60 +56,68 @@ export const SolutionView: React.FC<SolutionViewProps> = ({ response, onReset, l
     setIsCorrect(correct);
   };
 
+  // Helper for rendering Markdown
+  const MarkdownContent = ({ content }: { content: string }) => (
+    <ReactMarkdown
+      remarkPlugins={[remarkMath]}
+      rehypePlugins={[rehypeKatex]}
+      components={{
+        // Customize styling if needed
+        p: ({node, ...props}) => <p className="mb-4 last:mb-0 leading-7" {...props} />
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6">
+    <div className="w-full max-w-3xl mx-auto space-y-6 pb-20">
       
-      {/* 1. Main Solution Card */}
-      <div className="bg-white rounded-xl shadow-xl overflow-hidden animate-fade-in-up">
-        <div className="bg-indigo-600 p-4 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center text-white">
-            <Icons.Book className="w-6 h-6 mr-2" />
-            <h2 className="text-lg font-bold">{text.header}</h2>
+      {/* 1. The Answer Block */}
+      <div className="bg-white rounded-2xl shadow-lg border-l-8 border-indigo-500 overflow-hidden animate-fade-in-up">
+        <div className="p-5 md:p-6">
+          <div className="flex items-center space-x-2 mb-3 text-indigo-600">
+            <Icons.Lightbulb className="w-5 h-5" />
+            <h2 className="font-bold uppercase tracking-wider text-sm">{text.block1Title}</h2>
           </div>
-          <button
-            onClick={onReset}
-            className="text-white/80 hover:text-white hover:bg-indigo-700 p-2 rounded-full transition-colors"
-            aria-label={text.refreshLabel}
-          >
-            <Icons.Refresh className="w-5 h-5" />
-          </button>
-        </div>
-        
-        <div className="p-6 md:p-8 overflow-y-auto max-h-[60vh]">
-          <div className="markdown-body text-slate-800">
-            <ReactMarkdown
-              remarkPlugins={[remarkMath]}
-              rehypePlugins={[rehypeKatex]}
-            >
-              {response.explanation}
-            </ReactMarkdown>
+          <div className="text-xl md:text-2xl font-bold text-slate-900 markdown-body bg-indigo-50/50 p-4 rounded-xl">
+             <MarkdownContent content={response.answer} />
           </div>
         </div>
       </div>
 
-      {/* 2. Interactive Quiz Card */}
-      <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4">
-           <div className="flex items-center text-white">
-             <div className="bg-white/20 p-1.5 rounded-lg mr-2">
-                <Icons.Check className="w-5 h-5 text-white" />
-             </div>
+      {/* 2. Detailed Explanation Block */}
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+        <div className="bg-slate-50 border-b border-slate-100 p-4 px-6 flex items-center">
+            <Icons.Book className="w-5 h-5 mr-2 text-slate-500" />
+            <h2 className="font-bold text-slate-700">{text.block2Title}</h2>
+        </div>
+        
+        <div className="p-6 md:p-8">
+          <div className="markdown-body text-slate-800">
+            <MarkdownContent content={response.explanation} />
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Practice / Quiz Block */}
+      <div className="bg-gradient-to-br from-white to-purple-50 rounded-2xl shadow-lg border border-purple-100 overflow-hidden animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+        <div className="bg-purple-600 p-4 px-6 flex items-center justify-between text-white">
+           <div className="flex items-center">
+             <Icons.List className="w-5 h-5 mr-2" />
              <div>
-               <h3 className="font-bold text-lg leading-tight">{text.quizTitle}</h3>
-               <p className="text-indigo-100 text-xs opacity-90">{text.quizSubtitle}</p>
+               <h3 className="font-bold text-lg">{text.block3Title}</h3>
              </div>
            </div>
+           <span className="text-xs bg-purple-500/50 px-2 py-1 rounded text-purple-100 hidden sm:inline-block">
+             {text.block3Subtitle}
+           </span>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 md:p-8">
           {/* Question */}
-          <div className="markdown-body text-slate-800 mb-6 font-medium">
-             <ReactMarkdown
-              remarkPlugins={[remarkMath]}
-              rehypePlugins={[rehypeKatex]}
-             >
-               {response.quiz.question}
-             </ReactMarkdown>
+          <div className="markdown-body text-slate-800 mb-6 font-medium text-lg">
+             <MarkdownContent content={response.quiz.question} />
           </div>
 
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
@@ -120,7 +131,7 @@ export const SolutionView: React.FC<SolutionViewProps> = ({ response, onReset, l
               
               if (selectedOption === null) {
                 // Default state
-                btnClass += "border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 cursor-pointer";
+                btnClass += "border-slate-200 hover:border-purple-400 hover:bg-purple-50 cursor-pointer bg-white";
               } else {
                 // Result state
                 if (idx === response.quiz.correctIndex) {
@@ -145,7 +156,7 @@ export const SolutionView: React.FC<SolutionViewProps> = ({ response, onReset, l
                   <div className={`
                     w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3 border flex-shrink-0
                     ${selectedOption === null 
-                       ? "bg-slate-100 text-slate-500 border-slate-200 group-hover:bg-indigo-200 group-hover:text-indigo-700" 
+                       ? "bg-slate-100 text-slate-500 border-slate-200 group-hover:bg-purple-200 group-hover:text-purple-700" 
                        : idx === response.quiz.correctIndex 
                          ? "bg-green-500 text-white border-green-500"
                          : idx === selectedOption 
@@ -156,10 +167,7 @@ export const SolutionView: React.FC<SolutionViewProps> = ({ response, onReset, l
                     {String.fromCharCode(65 + idx)}
                   </div>
                   <span className="flex-1">
-                     {/* Render option with Markdown in case it has math */}
-                     <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]} components={{p: ({children}) => <span>{children}</span>}}>
-                       {option}
-                     </ReactMarkdown>
+                     <MarkdownContent content={option} />
                   </span>
                   
                   {/* Status Icons */}
@@ -176,26 +184,24 @@ export const SolutionView: React.FC<SolutionViewProps> = ({ response, onReset, l
 
           {/* Feedback Section */}
           {selectedOption !== null && (
-            <div className={`rounded-xl p-5 border ${isCorrect ? "bg-green-50 border-green-200" : "bg-indigo-50 border-indigo-200"} animate-fade-in`}>
+            <div className={`rounded-xl p-5 border ${isCorrect ? "bg-green-50 border-green-200" : "bg-purple-50 border-purple-200"} animate-fade-in`}>
                <div className="flex items-start mb-2">
                  {isCorrect ? (
-                   <div className="bg-green-100 p-1 rounded-full mr-2">
+                   <div className="bg-green-100 p-1 rounded-full mr-2 flex-shrink-0">
                      <Icons.Check className="w-4 h-4 text-green-700" />
                    </div>
                  ) : (
-                   <div className="bg-indigo-100 p-1 rounded-full mr-2">
-                     <Icons.Book className="w-4 h-4 text-indigo-700" />
+                   <div className="bg-purple-100 p-1 rounded-full mr-2 flex-shrink-0">
+                     <Icons.Book className="w-4 h-4 text-purple-700" />
                    </div>
                  )}
                  <div>
-                   <h4 className={`font-bold ${isCorrect ? "text-green-800" : "text-indigo-900"}`}>
+                   <h4 className={`font-bold ${isCorrect ? "text-green-800" : "text-purple-900"}`}>
                      {isCorrect ? text.correct : `${text.incorrect} ${String.fromCharCode(65 + response.quiz.correctIndex)}`}
                    </h4>
                    <div className="text-slate-700 mt-2 text-sm leading-relaxed markdown-body">
                       <span className="font-bold text-slate-900 mr-1">{text.explanation}</span>
-                      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                        {response.quiz.explanation}
-                      </ReactMarkdown>
+                      <MarkdownContent content={response.quiz.explanation} />
                    </div>
                  </div>
                </div>

@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Camera, Upload, RefreshCw, ChevronLeft, BookOpen, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Camera, Upload, RefreshCw, ChevronLeft, BookOpen, CheckCircle, AlertCircle, Loader2, Lightbulb, ListChecks } from 'lucide-react';
 
 export const Icons = {
   Camera,
@@ -9,5 +10,7 @@ export const Icons = {
   Book: BookOpen,
   Check: CheckCircle,
   Alert: AlertCircle,
-  Spinner: Loader2
+  Spinner: Loader2,
+  Lightbulb,
+  List: ListChecks
 };

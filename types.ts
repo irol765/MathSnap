@@ -1,3 +1,4 @@
+
 export enum AppState {
   IDLE = 'IDLE',
   ANALYZING = 'ANALYZING',
@@ -15,6 +16,7 @@ export interface QuizData {
 }
 
 export interface MathResponse {
+  answer: string;      // New field: Concise final answer
   explanation: string; // The markdown detailed solution
   quiz: QuizData;      // The interactive quiz object
 }
