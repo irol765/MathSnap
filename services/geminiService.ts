@@ -77,150 +77,191 @@ const SYSTEM_INSTRUCTION_ZH = `
 3.  **Markdown**：加粗标签内**绝不能有空格**。
 `;
 
-export const solveMathProblem = async (base64Image: string, lang: Language): Promise<MathResponse> => {
-  // Robustly handle API Key: trim whitespace which is a common copy-paste error
-  const apiKey = (process.env.API_KEY || "").trim();
-  let apiBaseUrl = (process.env.API_BASE_URL || "").trim(); 
-  const isZh = lang === 'zh';
-
-  // Format base URL
-  if (apiBaseUrl) {
-    if (apiBaseUrl.endsWith('/')) {
-      apiBaseUrl = apiBaseUrl.slice(0, -1);
+// Helper: Parse JSON response
+const parseResponse = (responseText: string, isZh: boolean): MathResponse => {
+  try {
+    // Clean up markdown code blocks if present (common issue with some models)
+    const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const jsonResponse = JSON.parse(cleanText) as MathResponse;
+    
+    if (!jsonResponse.explanation || !jsonResponse.quiz) {
+      throw new Error("Invalid structure");
     }
+    if (!jsonResponse.answer) {
+      jsonResponse.answer = isZh ? "见详细解析" : "See explanation below";
+    }
+    return jsonResponse;
+  } catch (e) {
+    console.error("JSON Parse Error:", e, "Raw:", responseText);
+    throw new Error(isZh ? "AI 返回数据格式错误。" : "Invalid JSON response from AI.");
+  }
+};
+
+/**
+ * Strategy 1: OpenAI Compatible API (NewAPI, OneAPI, etc.)
+ * Used when API_BASE_URL is provided.
+ */
+const callOpenAICompatible = async (
+  apiKey: string, 
+  baseUrl: string, 
+  model: string, 
+  base64Image: string, 
+  systemInstruction: string,
+  userPrompt: string
+): Promise<string> => {
+  // Construct OpenAI-compatible endpoint
+  let url = baseUrl.trim();
+  // Remove trailing slash
+  if (url.endsWith('/')) url = url.slice(0, -1);
+  
+  // Append /chat/completions if not present
+  if (!url.endsWith('/chat/completions')) {
+     url = `${url}/chat/completions`;
   }
 
-  const debugConfig = {
-    hasKey: !!apiKey,
-    keyPrefix: apiKey ? apiKey.substring(0, 5) + "..." : "Missing",
-    baseUrl: apiBaseUrl || "(Default Google)",
+  const payload = {
+    model: model,
+    messages: [
+      { role: "system", content: systemInstruction },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: userPrompt },
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+        ]
+      }
+    ],
+    temperature: 0.2
   };
 
-  console.log("Gemini Service Config:", debugConfig);
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI API Error (${response.status}): ${errorText}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Empty response from OpenAI compatible API");
+  
+  return content;
+};
+
+/**
+ * Strategy 2: Google Native API
+ * Used when no API_BASE_URL is provided (Default).
+ */
+const callGoogleNative = async (
+  apiKey: string,
+  model: string,
+  base64Image: string,
+  systemInstruction: string,
+  userPrompt: string,
+  isZh: boolean
+): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey });
+
+  const config: any = {
+    systemInstruction,
+    responseMimeType: 'application/json',
+    temperature: 0.2,
+  };
+
+  // Enable thinking for Pro models (Gemini 2.5/3.0 feature) if available in SDK
+  if (model.includes('pro')) {
+    config.thinkingConfig = { thinkingBudget: 2048 };
+  }
+
+  const response = await ai.models.generateContent({
+    model,
+    contents: {
+      parts: [
+        { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
+        { text: userPrompt }
+      ]
+    },
+    config
+  });
+
+  if (!response.text) throw new Error("Empty response");
+  return response.text;
+};
+
+export const solveMathProblem = async (base64Image: string, lang: Language): Promise<MathResponse> => {
+  const apiKey = (process.env.API_KEY || "").trim();
+  const apiBaseUrl = (process.env.API_BASE_URL || "").trim(); 
+  const isZh = lang === 'zh';
 
   if (!apiKey) {
     throw new Error(
       isZh 
-        ? "未检测到 API Key。请在 Vercel 环境变量中配置 API_KEY 并重新部署。" 
-        : "API Key is missing. Please configure API_KEY in Vercel and Redeploy."
+        ? "未检测到 API Key。请在 Vercel 环境变量中配置 API_KEY。" 
+        : "API Key is missing. Please configure API_KEY in Vercel."
     );
   }
 
-  const clientConfig: any = { apiKey: apiKey };
-  if (apiBaseUrl) {
-    clientConfig.baseUrl = apiBaseUrl;
-  }
-  const ai = new GoogleGenAI(clientConfig);
+  // Determine Strategy: If API_BASE_URL is present, use OpenAI compatibility mode
+  const useOpenAI = !!apiBaseUrl && apiBaseUrl.length > 0;
+  
+  const systemInstruction = isZh ? SYSTEM_INSTRUCTION_ZH : SYSTEM_INSTRUCTION_EN;
+  const userPrompt = isZh ? "请分析图片并输出 JSON 答案。" : "Analyze image and output JSON.";
 
-  // Helper to parse response
-  const parseResponse = (responseText: string): MathResponse => {
-    try {
-      // Clean up markdown code blocks if present (common issue with some models)
-      const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const jsonResponse = JSON.parse(cleanText) as MathResponse;
-      
-      if (!jsonResponse.explanation || !jsonResponse.quiz) {
-        throw new Error("Invalid structure");
-      }
-      if (!jsonResponse.answer) {
-        jsonResponse.answer = isZh ? "见详细解析" : "See explanation below";
-      }
-      return jsonResponse;
-    } catch (e) {
-      console.error("JSON Parse Error:", e, "Raw:", responseText);
-      throw new Error(isZh ? "AI 返回数据格式错误。" : "Invalid JSON response from AI.");
+  // Define models (Consistency between strategies)
+  const models = {
+    primary: 'gemini-3-pro-preview',
+    fallback: 'gemini-2.5-flash'
+  };
+
+  const attemptCall = async (model: string) => {
+    if (useOpenAI) {
+      console.log(`Calling OpenAI Compatible API (${model}) at ${apiBaseUrl}`);
+      return await callOpenAICompatible(apiKey, apiBaseUrl, model, base64Image, systemInstruction, userPrompt);
+    } else {
+      console.log(`Calling Google Native API (${model})`);
+      return await callGoogleNative(apiKey, model, base64Image, systemInstruction, userPrompt, isZh);
     }
   };
 
-  const handleError = (error: any, modelAttempted: string) => {
-    console.error(`Gemini API Error (${modelAttempted}):`, error);
-    const msg = (error.message || error.toString()).toLowerCase();
-
-    // 1. Auth Errors (401)
-    if (msg.includes("401") || msg.includes("unauthenticated") || msg.includes("key")) {
-      const info = `(Key: ${debugConfig.keyPrefix}, BaseURL: ${debugConfig.baseUrl})`;
-      throw new Error(isZh 
-        ? `API Key 无效或未授权 (401)。请检查 Key 是否正确，或代理地址是否配置正确。${info}`
-        : `API Key invalid or unauthorized (401). Check Key and Base URL. ${info}`);
-    }
-
-    // 2. Model Not Found (404)
-    if (msg.includes("404") || msg.includes("not found")) {
-      // If 404, we might want to try fallback, so re-throw specially or handle in caller
-      throw new Error("MODEL_NOT_FOUND");
-    }
-
-    // 3. Rate Limit / Quota (429)
-    if (msg.includes("429") || msg.includes("quota") || msg.includes("exhausted")) {
-      throw new Error(isZh ? "API 调用次数超限 (429)。请稍后再试。" : "API Quota Exceeded (429). Please try again later.");
-    }
-    
-    // 4. Network
-    if (msg.includes("fetch") || msg.includes("network") || msg.includes("load failed")) {
-      throw new Error(isZh 
-        ? `网络请求失败。请检查 API_BASE_URL (${debugConfig.baseUrl})。` 
-        : `Network failed. Check API_BASE_URL (${debugConfig.baseUrl}).`);
-    }
-
-    throw error;
-  };
-
-  // ATTEMPT 1: Gemini 3 Pro (Preferred)
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: {
-        parts: [
-          { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-          { text: isZh ? "请分析图片并输出 JSON 答案。" : "Analyze image and output JSON." }
-        ]
-      },
-      config: {
-        systemInstruction: isZh ? SYSTEM_INSTRUCTION_ZH : SYSTEM_INSTRUCTION_EN,
-        responseMimeType: 'application/json',
-        thinkingConfig: { thinkingBudget: 2048 }, // 2.5/3.0 feature
-        temperature: 0.2,
-      }
-    });
-
-    if (!response.text) throw new Error("Empty response");
-    return parseResponse(response.text);
+    // ATTEMPT 1: Primary Model
+    const text = await attemptCall(models.primary);
+    return parseResponse(text, isZh);
 
   } catch (error: any) {
-    // If it's NOT a model/param error, stop here (e.g. Auth error should not retry)
-    try {
-      handleError(error, 'gemini-3-pro-preview');
-    } catch (e: any) {
-      if (e.message !== "MODEL_NOT_FOUND" && !e.message.includes("400") && !e.message.includes("thinking")) {
-        throw e; // Re-throw fatal errors
-      }
-      console.warn("Primary model failed, attempting fallback to Gemini 2.5 Flash...");
+    console.warn(`Primary model (${models.primary}) failed:`, error);
+    
+    // Check for fatal auth errors (401)
+    const msg = (error.message || "").toLowerCase();
+    if (msg.includes("401") || msg.includes("unauthenticated") || msg.includes("invalid api key")) {
+       throw new Error(
+         isZh 
+           ? `API Key 无效或未授权 (401)。请检查 Key 是否正确。`
+           : `Invalid API Key or Unauthorized (401).`
+       );
     }
 
-    // ATTEMPT 2: Fallback to Gemini 2.5 Flash
-    // Remove thinkingConfig and use a more standard model if the pro model fails
+    // ATTEMPT 2: Fallback Model
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: {
-          parts: [
-            { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-            { text: isZh ? "请分析图片并输出 JSON 答案。" : "Analyze image and output JSON." }
-          ]
-        },
-        config: {
-          systemInstruction: isZh ? SYSTEM_INSTRUCTION_ZH : SYSTEM_INSTRUCTION_EN,
-          responseMimeType: 'application/json',
-          temperature: 0.2,
-          // Note: No thinkingConfig here to be safe
-        }
-      });
-
-      if (!response.text) throw new Error("Empty response from fallback");
-      return parseResponse(response.text);
-      
+      console.log(`Falling back to ${models.fallback}...`);
+      const text = await attemptCall(models.fallback);
+      return parseResponse(text, isZh);
     } catch (fallbackError: any) {
-      handleError(fallbackError, 'gemini-2.5-flash');
+      console.error("Fallback failed:", fallbackError);
+      
+      // Simplify error message for UI
+      const fallbackMsg = (fallbackError.message || "").toLowerCase();
+      if (fallbackMsg.includes("404") || fallbackMsg.includes("not found")) {
+         throw new Error(isZh ? "未找到模型 (404)。请检查 API 提供商是否支持 Gemini 模型。" : "Model not found (404). Check if provider supports Gemini.");
+      }
+      
       throw fallbackError;
     }
   }
