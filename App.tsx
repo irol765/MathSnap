@@ -234,7 +234,7 @@ export default function App() {
               <Icons.Alert className="w-8 h-8" />
             </div>
             <h3 className="text-xl font-bold text-slate-800 mb-2">{t.errorTitle}</h3>
-            <p className="text-slate-600 mb-6">
+            <p className="text-slate-600 mb-6 break-words">
               {error}
             </p>
             <button

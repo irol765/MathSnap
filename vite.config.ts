@@ -10,12 +10,12 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // CRITICAL FIX: Prioritize process.env (system vars provided by Vercel) 
-      // over env (vars loaded from local .env files).
-      // This ensures that variables set in the Vercel Dashboard are correctly injected.
-      'process.env.API_KEY': JSON.stringify(process.env.API_KEY || env.API_KEY),
-      'process.env.ACCESS_CODE': JSON.stringify(process.env.ACCESS_CODE || env.ACCESS_CODE || ''),
-      'process.env.API_BASE_URL': JSON.stringify(process.env.API_BASE_URL || env.API_BASE_URL || ''),
+      // Prioritize process.env (system vars provided by Vercel) over loaded env files.
+      // We use JSON.stringify to ensure the values are embedded as strings.
+      // We explicitly handle undefined to avoid "undefined" string injection or crashes.
+      'process.env.API_KEY': JSON.stringify(process.env.API_KEY ?? env.API_KEY ?? ''),
+      'process.env.ACCESS_CODE': JSON.stringify(process.env.ACCESS_CODE ?? env.ACCESS_CODE ?? ''),
+      'process.env.API_BASE_URL': JSON.stringify(process.env.API_BASE_URL ?? env.API_BASE_URL ?? ''),
     },
     build: {
       outDir: 'dist',

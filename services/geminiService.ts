@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Language, MathResponse } from "../types";
 
@@ -79,131 +78,151 @@ const SYSTEM_INSTRUCTION_ZH = `
 `;
 
 export const solveMathProblem = async (base64Image: string, lang: Language): Promise<MathResponse> => {
-  const apiKey = process.env.API_KEY;
-  let apiBaseUrl = process.env.API_BASE_URL; 
+  // Robustly handle API Key: trim whitespace which is a common copy-paste error
+  const apiKey = (process.env.API_KEY || "").trim();
+  let apiBaseUrl = (process.env.API_BASE_URL || "").trim(); 
   const isZh = lang === 'zh';
 
-  // Enhanced Debug log to help users verify their config
-  console.log("Gemini Service Config:", { 
+  // Format base URL
+  if (apiBaseUrl) {
+    if (apiBaseUrl.endsWith('/')) {
+      apiBaseUrl = apiBaseUrl.slice(0, -1);
+    }
+  }
+
+  const debugConfig = {
     hasKey: !!apiKey,
-    keyLength: apiKey?.length || 0,
-    keyPrefix: apiKey ? apiKey.substring(0, 4) + "..." : "None", 
+    keyPrefix: apiKey ? apiKey.substring(0, 5) + "..." : "Missing",
     baseUrl: apiBaseUrl || "(Default Google)",
-    model: 'gemini-3-pro-preview'
-  });
+  };
+
+  console.log("Gemini Service Config:", debugConfig);
 
   if (!apiKey) {
-    console.error("API_KEY is missing. Environment variables might not be injected correctly.");
     throw new Error(
       isZh 
-        ? "系统未配置 API Key。请检查 Vercel 环境变量设置，并确保已重新部署 (Redeploy)。" 
-        : "API Key not configured. Please check Vercel environment variables and Redeploy."
+        ? "未检测到 API Key。请在 Vercel 环境变量中配置 API_KEY 并重新部署。" 
+        : "API Key is missing. Please configure API_KEY in Vercel and Redeploy."
     );
   }
 
-  try {
-    const clientConfig: any = { apiKey: apiKey };
-    
-    if (apiBaseUrl) {
-      // Remove trailing slash if present to avoid double slashes in SDK path construction
-      if (apiBaseUrl.endsWith('/')) {
-        apiBaseUrl = apiBaseUrl.slice(0, -1);
+  const clientConfig: any = { apiKey: apiKey };
+  if (apiBaseUrl) {
+    clientConfig.baseUrl = apiBaseUrl;
+  }
+  const ai = new GoogleGenAI(clientConfig);
+
+  // Helper to parse response
+  const parseResponse = (responseText: string): MathResponse => {
+    try {
+      // Clean up markdown code blocks if present (common issue with some models)
+      const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const jsonResponse = JSON.parse(cleanText) as MathResponse;
+      
+      if (!jsonResponse.explanation || !jsonResponse.quiz) {
+        throw new Error("Invalid structure");
       }
-      clientConfig.baseUrl = apiBaseUrl;
+      if (!jsonResponse.answer) {
+        jsonResponse.answer = isZh ? "见详细解析" : "See explanation below";
+      }
+      return jsonResponse;
+    } catch (e) {
+      console.error("JSON Parse Error:", e, "Raw:", responseText);
+      throw new Error(isZh ? "AI 返回数据格式错误。" : "Invalid JSON response from AI.");
+    }
+  };
+
+  const handleError = (error: any, modelAttempted: string) => {
+    console.error(`Gemini API Error (${modelAttempted}):`, error);
+    const msg = (error.message || error.toString()).toLowerCase();
+
+    // 1. Auth Errors (401)
+    if (msg.includes("401") || msg.includes("unauthenticated") || msg.includes("key")) {
+      const info = `(Key: ${debugConfig.keyPrefix}, BaseURL: ${debugConfig.baseUrl})`;
+      throw new Error(isZh 
+        ? `API Key 无效或未授权 (401)。请检查 Key 是否正确，或代理地址是否配置正确。${info}`
+        : `API Key invalid or unauthorized (401). Check Key and Base URL. ${info}`);
     }
 
-    const ai = new GoogleGenAI(clientConfig);
+    // 2. Model Not Found (404)
+    if (msg.includes("404") || msg.includes("not found")) {
+      // If 404, we might want to try fallback, so re-throw specially or handle in caller
+      throw new Error("MODEL_NOT_FOUND");
+    }
 
+    // 3. Rate Limit / Quota (429)
+    if (msg.includes("429") || msg.includes("quota") || msg.includes("exhausted")) {
+      throw new Error(isZh ? "API 调用次数超限 (429)。请稍后再试。" : "API Quota Exceeded (429). Please try again later.");
+    }
+    
+    // 4. Network
+    if (msg.includes("fetch") || msg.includes("network") || msg.includes("load failed")) {
+      throw new Error(isZh 
+        ? `网络请求失败。请检查 API_BASE_URL (${debugConfig.baseUrl})。` 
+        : `Network failed. Check API_BASE_URL (${debugConfig.baseUrl}).`);
+    }
+
+    throw error;
+  };
+
+  // ATTEMPT 1: Gemini 3 Pro (Preferred)
+  try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: {
         parts: [
-          {
-            inlineData: {
-              mimeType: 'image/jpeg',
-              data: base64Image
-            }
-          },
-          {
-            text: isZh 
-              ? "请分析图片内容，并按 JSON 格式分别输出：简洁答案、详细解析和互动测验。"
-              : "Please analyze the image and output the answer, detailed explanation, and quiz in JSON format."
-          }
+          { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
+          { text: isZh ? "请分析图片并输出 JSON 答案。" : "Analyze image and output JSON." }
         ]
       },
       config: {
         systemInstruction: isZh ? SYSTEM_INSTRUCTION_ZH : SYSTEM_INSTRUCTION_EN,
-        responseMimeType: 'application/json', // Force JSON output
-        thinkingConfig: {
-          thinkingBudget: 2048 
-        },
+        responseMimeType: 'application/json',
+        thinkingConfig: { thinkingBudget: 2048 }, // 2.5/3.0 feature
         temperature: 0.2,
       }
     });
 
-    if (!response.text) {
-      throw new Error(isZh ? "无法生成解释 (响应为空)。" : "No explanation generated (empty response).");
-    }
-
-    // Parse JSON response
-    try {
-      const jsonResponse = JSON.parse(response.text) as MathResponse;
-      
-      // Basic validation
-      if (!jsonResponse.explanation || !jsonResponse.quiz) {
-        throw new Error("Invalid JSON structure");
-      }
-      
-      // Fallback for answer if model misses it
-      if (!jsonResponse.answer) {
-        jsonResponse.answer = isZh ? "见详细解析" : "See explanation below";
-      }
-      
-      return jsonResponse;
-    } catch (parseError) {
-      console.error("JSON Parse Error:", parseError, "Raw text:", response.text);
-      throw new Error(isZh ? "AI 返回数据格式错误，请重试。" : "Failed to parse AI response.");
-    }
+    if (!response.text) throw new Error("Empty response");
+    return parseResponse(response.text);
 
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    
-    const msg = (error.message || error.toString()).toLowerCase();
-
-    // 1. Handle API Key errors specifically (401 / Invalid Key)
-    if (msg.includes("key") || msg.includes("401") || msg.includes("unauthenticated")) {
-      if (apiKey?.startsWith("sk-") && !apiBaseUrl) {
-        const errorMsg = isZh
-          ? "API Key 无效。检测到您使用的是代理 Key (sk-...)，但未配置 API_BASE_URL。请在 Vercel 环境变量中添加 API_BASE_URL 并重新部署。"
-          : "Invalid API Key. You are using a proxy key (sk-...) but API_BASE_URL is not active. Please configure API_BASE_URL.";
-        throw new Error(errorMsg);
+    // If it's NOT a model/param error, stop here (e.g. Auth error should not retry)
+    try {
+      handleError(error, 'gemini-3-pro-preview');
+    } catch (e: any) {
+      if (e.message !== "MODEL_NOT_FOUND" && !e.message.includes("400") && !e.message.includes("thinking")) {
+        throw e; // Re-throw fatal errors
       }
-      throw new Error(isZh ? "API Key 无效或未授权 (401)。请检查配置。" : "API Key is invalid or unauthorized (401).");
+      console.warn("Primary model failed, attempting fallback to Gemini 2.5 Flash...");
     }
 
-    // 2. Handle Model Not Found (404) - Common if provider doesn't support the specific model
-    if (msg.includes("404") || msg.includes("not found")) {
-      throw new Error(isZh 
-        ? "模型未找到 (404)。可能是您的 API 提供商不支持 'gemini-3-pro-preview' 模型。" 
-        : "Model not found (404). 'gemini-3-pro-preview' might not be supported by your provider.");
-    }
+    // ATTEMPT 2: Fallback to Gemini 2.5 Flash
+    // Remove thinkingConfig and use a more standard model if the pro model fails
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: {
+          parts: [
+            { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
+            { text: isZh ? "请分析图片并输出 JSON 答案。" : "Analyze image and output JSON." }
+          ]
+        },
+        config: {
+          systemInstruction: isZh ? SYSTEM_INSTRUCTION_ZH : SYSTEM_INSTRUCTION_EN,
+          responseMimeType: 'application/json',
+          temperature: 0.2,
+          // Note: No thinkingConfig here to be safe
+        }
+      });
 
-    // 3. Handle Thinking Config errors (400) - Some proxies/models don't support thinkingConfig
-    if (msg.includes("thinking") || msg.includes("invalid argument") || msg.includes("400")) {
-      throw new Error(isZh
-        ? "参数错误 (400)。可能是您的 API 提供商不支持思考模型配置 (thinkingConfig)。"
-        : "Invalid Argument (400). Your provider may not support 'thinkingConfig'.");
+      if (!response.text) throw new Error("Empty response from fallback");
+      return parseResponse(response.text);
+      
+    } catch (fallbackError: any) {
+      handleError(fallbackError, 'gemini-2.5-flash');
+      throw fallbackError;
     }
-
-    // 4. Handle Network/Fetch errors
-    if (msg.includes("load failed") || msg.includes("fetch") || msg.includes("network")) {
-       const networkErrorMsg = isZh 
-         ? "网络连接失败。请检查：1. 代理/VPN 设置；2. API_BASE_URL 是否正确；3. Vercel 是否已重新部署。"
-         : "Network request failed. Please check: 1. Connection/VPN; 2. API_BASE_URL configuration; 3. Ensure you have Redeployed.";
-       throw new Error(networkErrorMsg);
-    }
-
-    throw new Error(isZh ? "分析失败，请稍后重试。" : "Failed to analyze the image.");
   }
 };
 
