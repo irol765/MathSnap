@@ -80,8 +80,15 @@ const SYSTEM_INSTRUCTION_ZH = `
 
 export const solveMathProblem = async (base64Image: string, lang: Language): Promise<MathResponse> => {
   const apiKey = process.env.API_KEY;
-  const apiBaseUrl = process.env.API_BASE_URL; // Get custom base URL if defined
+  let apiBaseUrl = process.env.API_BASE_URL; 
   const isZh = lang === 'zh';
+
+  // Debug log to help users verify their config
+  console.log("Gemini Service Config:", { 
+    hasKey: !!apiKey, 
+    keyPrefix: apiKey?.substring(0, 4) + "...", 
+    baseUrl: apiBaseUrl || "(Default Google)" 
+  });
 
   if (!apiKey) {
     console.error("API_KEY is missing in process.env");
@@ -93,10 +100,13 @@ export const solveMathProblem = async (base64Image: string, lang: Language): Pro
   }
 
   try {
-    // Configure client with optional baseUrl
     const clientConfig: any = { apiKey: apiKey };
+    
     if (apiBaseUrl) {
-      // The SDK uses 'baseUrl' to override the default Google endpoint
+      // Remove trailing slash if present to avoid double slashes in SDK path construction
+      if (apiBaseUrl.endsWith('/')) {
+        apiBaseUrl = apiBaseUrl.slice(0, -1);
+      }
       clientConfig.baseUrl = apiBaseUrl;
     }
 
@@ -156,21 +166,30 @@ export const solveMathProblem = async (base64Image: string, lang: Language): Pro
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     
-    // Handle specific API Key error
-    if (error.message?.includes("API_KEY")) {
-      throw error;
+    const msg = error.message || error.toString();
+
+    // 1. Handle API Key errors specifically
+    if (msg.includes("API key not valid") || msg.includes("API_KEY_INVALID")) {
+      // Diagnostic check: User has a Proxy Key (sk-...) but Base URL is empty/default
+      if (apiKey?.startsWith("sk-") && !apiBaseUrl) {
+        const errorMsg = isZh
+          ? "API Key 无效。检测到您使用的是代理 Key (sk-...)，但未配置 API_BASE_URL。如果您已在 Vercel 添加了变量，请务必执行 Redeploy (重新部署) 以使其生效。"
+          : "Invalid API Key. You are using a proxy key (sk-...) but API_BASE_URL is not active. If you added the variable in Vercel, you MUST Redeploy for it to take effect.";
+        throw new Error(errorMsg);
+      }
+      
+      throw new Error(isZh ? "API Key 无效，请检查配置。" : "API Key is invalid.");
     }
 
-    // Handle Network/Fetch errors (common with Firewall/GFW or AdBlockers)
-    const msg = error.message || error.toString();
+    // 2. Handle Network/Fetch errors (common with Firewall/GFW or AdBlockers)
     if (msg.includes("Load failed") || msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
        const networkErrorMsg = isZh 
-         ? "网络连接失败。请检查：1. 是否开启代理/VPN（如在中国大陆）；2. API Base URL 是否正确；3. API Key 是否有效。"
-         : "Network request failed. Please check: 1. Your VPN connection (if in a restricted region); 2. The API Base URL configuration; 3. Validity of your API Key.";
+         ? "网络连接失败。请检查：1. 是否开启代理/VPN（如在中国大陆）；2. API_BASE_URL 是否正确；3. Vercel 是否已重新部署。"
+         : "Network request failed. Please check: 1. VPN connection; 2. API_BASE_URL configuration; 3. Ensure you have Redeployed Vercel.";
        throw new Error(networkErrorMsg);
     }
 
-    throw new Error(error.message || "Failed to analyze the image.");
+    throw new Error(msg || "Failed to analyze the image.");
   }
 };
 

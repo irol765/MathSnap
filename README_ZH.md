@@ -1,3 +1,4 @@
+
 [🇺🇸 English Readme](README.md)
 
 # StudySnap (学习拍 - AI 全科导师)
@@ -35,16 +36,20 @@
 3.  选择刚才 Fork 的 GitHub 仓库并点击 **Import**。
 4.  在 **Configure Project** 页面，找到 **Environment Variables** (环境变量) 部分。
 5.  添加以下环境变量：
-    *   **API_KEY** (必填): 粘贴你在 Google AI Studio 获取的 API Key。
-    *   **ACCESS_CODE** (选填): 设置一个安全访问码（如 `123456`）。如果设置了此变量，用户打开网页时必须输入正确的代码才能使用服务。
-    *   **API_BASE_URL** (选填): 自定义 API 地址（例如 `https://api.your-proxy.com`）。如果你在中国大陆且没有 VPN，或者使用第三方的 API 中转服务，请配置此项。
+    *   **API_KEY** (必填): 粘贴你的 Google Gemini API Key。如果是使用中转服务，请填入中转 Key (通常以 `sk-` 开头)。
+    *   **ACCESS_CODE** (选填): 设置一个安全访问码（如 `123456`）。
+    *   **API_BASE_URL** (选填): **如果你在中国大陆或使用第三方中转 (NewAPI/OneAPI)，此项必填**。填入你的代理地址，例如 `https://api.your-proxy.com`。
 6.  点击 **Deploy**。
 
-### 3. 防止白屏 / 网络报错 (Troubleshooting)
+### ⚠️ 重要提示：修改环境变量后必须重新部署
+如果你在初次部署后才添加或修改了 `API_BASE_URL` 或 `API_KEY`，你必须手动触发重新部署，否则新变量**不会生效**。
+*   操作方法：Vercel 控制台 -> Deployments -> 点击最新部署右侧的三个点 -> **Redeploy**。
 
-如果部署后出现白屏或 "Load failed"，通常是因为：
-*   **网络问题**：如果您在中国大陆，Google 官方 API 可能无法连接。解决方案是配置 `API_BASE_URL` 使用中转服务，或者在设备上开启 VPN。
-*   **API Key 未设置**：请确保在 Vercel 的 Environment Variables 中正确添加了 `API_KEY`。
+## 常见问题 (Troubleshooting)
+
+### 报错: "API key not valid" 或 "Load failed"
+*   **API Key 格式问题**：如果你使用的是中转 Key (sk-...) 但应用报错 "API key not valid"，说明请求直接发往了 Google 官方而非你的代理地址。
+*   **解决方法**：请检查 Vercel 环境变量中是否正确设置了 `API_BASE_URL`，并且**一定要执行 Redeploy (重新部署)**。
 
 ## 手机安装 (PWA)
 
@@ -73,9 +78,9 @@
 3.  设置环境变量：
     在根目录创建 `.env` 文件，并添加：
     ```env
-    API_KEY=your_google_gemini_api_key_here
-    ACCESS_CODE=optional_secret_code
-    API_BASE_URL=https://your-custom-proxy.com # 可选，用于自定义代理地址
+    API_KEY=your_key_here
+    ACCESS_CODE=optional_code
+    API_BASE_URL=https://your-custom-proxy.com # 可选
     ```
 
 4.  启动开发服务器：

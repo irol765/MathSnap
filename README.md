@@ -1,3 +1,4 @@
+
 [🇨🇳 中文说明 (Chinese Version)](README_ZH.md)
 
 # StudySnap - AI General Tutor
@@ -35,8 +36,12 @@ This project is optimized for Vercel.
 3.  In **Environment Variables**, add:
     *   `API_KEY`: Your Google Gemini API Key.
     *   `ACCESS_CODE` (Optional): A password (e.g., `123456`) to restrict access.
-    *   `API_BASE_URL` (Optional): Custom API endpoint (e.g., `https://your-proxy-domain.com`). Useful if you are using a third-party relay service.
+    *   `API_BASE_URL` (Optional): Custom API endpoint. **Required if you are using a third-party proxy** (e.g., `https://api.your-proxy.com`).
 4.  **Deploy**.
+
+### ⚠️ IMPORTANT: Updating Variables
+If you add or change `API_BASE_URL` or `API_KEY` after the initial deployment, you **MUST Redeploy** for the changes to take effect in the app.
+*   Go to Vercel Dashboard -> Deployments -> Click the 3 dots on the latest deployment -> **Redeploy**.
 
 ## Mobile Installation (PWA)
 
@@ -64,9 +69,9 @@ This project is optimized for Vercel.
 
 3.  Create a `.env` file:
     ```env
-    API_KEY=your_google_gemini_api_key
-    ACCESS_CODE=optional_secret_code
-    API_BASE_URL=https://your-custom-proxy.com # Optional
+    API_KEY=your_key_here
+    ACCESS_CODE=optional_code
+    API_BASE_URL=https://your-proxy.com # Optional
     ```
 
 4.  Run:
