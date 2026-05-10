@@ -57,36 +57,27 @@ export default function App() {
   const [appState, setAppState] = useState<AppState>(AppState.IDLE);
   const [language, setLanguage] = useState<Language>('zh');
   const [currentImage, setCurrentImage] = useState<string | null>(null);
-  
-  // Update state to hold the MathResponse object
+
   const [response, setResponse] = useState<MathResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
-  // Security Gate State
+
   const [isVerified, setIsVerified] = useState<boolean>(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   const t = TRANSLATIONS[language];
   const [loadingText, setLoadingText] = useState(t.analyzingTitle);
 
-  // Check for Access Code on mount
   useEffect(() => {
-    const requiredCode = process.env.ACCESS_CODE;
-    
-    if (!requiredCode) {
-      // No code configured in env, allow access
-      setIsVerified(true);
-      setCheckingAuth(false);
-      return;
-    }
-
-    const savedToken = localStorage.getItem('mathsnap_access_token');
-    if (savedToken === requiredCode) {
-      setIsVerified(true);
-    } else {
-      setIsVerified(false);
-    }
-    setCheckingAuth(false);
+    fetch('/api/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: '' }),
+    })
+      .then(res => {
+        if (res.ok) setIsVerified(true);
+      })
+      .catch(() => {})
+      .finally(() => setCheckingAuth(false));
   }, []);
 
   useEffect(() => {
@@ -112,8 +103,8 @@ export default function App() {
     try {
       setAppState(AppState.ANALYZING);
       setError(null);
-      setResponse(null); // Clear previous response
-      
+      setResponse(null);
+
       const base64 = await fileToBase64(file);
       setCurrentImage(base64);
 
@@ -139,16 +130,14 @@ export default function App() {
     setLanguage(prev => prev === 'en' ? 'zh' : 'en');
   };
 
-  // While checking local storage, show nothing or a spinner
   if (checkingAuth) return null;
 
-  // If locked, show the gate
   if (!isVerified) {
     return (
-      <AccessGate 
-        onUnlock={() => setIsVerified(true)} 
-        lang={language} 
-        onLanguageToggle={toggleLanguage} 
+      <AccessGate
+        onUnlock={() => setIsVerified(true)}
+        lang={language}
+        onLanguageToggle={toggleLanguage}
       />
     );
   }
@@ -166,9 +155,9 @@ export default function App() {
               {t.title}
             </h1>
           </div>
-          
+
           <div className="flex items-center space-x-3 flex-shrink-0 ml-2">
-             <button 
+             <button
                onClick={toggleLanguage}
                className="flex items-center px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-colors border border-slate-200"
              >
@@ -176,7 +165,7 @@ export default function App() {
                <span className="mx-1 text-slate-300">/</span>
                <span className={language === 'en' ? "text-indigo-600" : "text-slate-400"}>EN</span>
              </button>
-             
+
              <span className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-md border border-indigo-100 hidden sm:inline-block">
                 Gemini 3 Pro
              </span>
@@ -186,7 +175,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 flex flex-col items-center justify-center">
-        
+
         {/* State: IDLE */}
         {appState === AppState.IDLE && (
           <div className="w-full flex flex-col items-center animate-fade-in">
@@ -207,9 +196,9 @@ export default function App() {
           <div className="w-full flex flex-col items-center justify-center py-12 animate-fade-in">
             <div className="relative w-64 h-64 md:w-80 md:h-80 mb-8 rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
               {currentImage && (
-                <img 
-                  src={`data:image/jpeg;base64,${currentImage}`} 
-                  alt="Analyzing" 
+                <img
+                  src={`data:image/jpeg;base64,${currentImage}`}
+                  alt="Analyzing"
                   className="w-full h-full object-cover opacity-80"
                 />
               )}
@@ -251,7 +240,7 @@ export default function App() {
           <div className="w-full animate-fade-in">
             <div className="mb-6 flex justify-center">
                <div className="w-full max-w-3xl flex items-center justify-between mb-4 px-2">
-                 <button 
+                 <button
                    onClick={handleReset}
                    className="flex items-center text-slate-500 hover:text-indigo-600 transition-colors text-sm font-medium"
                  >
@@ -263,7 +252,6 @@ export default function App() {
                  </span>
                </div>
             </div>
-            {/* Pass the full response object to SolutionView */}
             <SolutionView response={response} onReset={handleReset} lang={language} />
           </div>
         )}

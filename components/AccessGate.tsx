@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Icons } from './Icon';
 import { Language } from '../types';
 
@@ -12,11 +12,12 @@ export const AccessGate: React.FC<AccessGateProps> = ({ onUnlock, lang, onLangua
   const [inputCode, setInputCode] = useState('');
   const [error, setError] = useState(false);
   const [shake, setShake] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   const t = {
     en: {
       title: "Security Check",
-      subtitle: "Please enter the access code to use MathSnap.",
+      subtitle: "Please enter the access code to use StudySnap.",
       placeholder: "Enter Access Code",
       button: "Unlock",
       error: "Incorrect access code. Please try again.",
@@ -24,7 +25,7 @@ export const AccessGate: React.FC<AccessGateProps> = ({ onUnlock, lang, onLangua
     },
     zh: {
       title: "安全验证",
-      subtitle: "请输入访问码以使用 MathSnap。",
+      subtitle: "请输入访问码以使用 StudySnap。",
       placeholder: "在此输入访问码",
       button: "解锁",
       error: "访问码错误，请重试。",
@@ -34,18 +35,31 @@ export const AccessGate: React.FC<AccessGateProps> = ({ onUnlock, lang, onLangua
 
   const text = t[lang];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const correctCode = process.env.ACCESS_CODE;
-    
-    if (inputCode === correctCode) {
-      // Persist login
-      localStorage.setItem('mathsnap_access_token', inputCode);
-      onUnlock();
-    } else {
+    setError(false);
+    setVerifying(true);
+
+    try {
+      const response = await fetch('/api/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: inputCode }),
+      });
+
+      if (response.ok) {
+        onUnlock();
+      } else {
+        setError(true);
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+      }
+    } catch {
       setError(true);
       setShake(true);
       setTimeout(() => setShake(false), 500);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -53,7 +67,7 @@ export const AccessGate: React.FC<AccessGateProps> = ({ onUnlock, lang, onLangua
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
       {/* Language Toggle (Top Right) */}
       <div className="absolute top-4 right-4">
-         <button 
+         <button
            onClick={onLanguageToggle}
            className="flex items-center px-3 py-1.5 rounded-full bg-white shadow-sm text-slate-700 font-semibold text-sm transition-colors border border-slate-200"
          >
@@ -84,8 +98,8 @@ export const AccessGate: React.FC<AccessGateProps> = ({ onUnlock, lang, onLangua
                 }}
                 className={`
                   w-full px-4 py-3 rounded-xl border-2 outline-none transition-all text-center text-lg tracking-widest
-                  ${error 
-                    ? 'border-red-300 bg-red-50 focus:border-red-500 text-red-900 placeholder-red-300' 
+                  ${error
+                    ? 'border-red-300 bg-red-50 focus:border-red-500 text-red-900 placeholder-red-300'
                     : 'border-slate-200 bg-slate-50 focus:border-indigo-500 focus:bg-white text-slate-800'
                   }
                 `}
@@ -102,9 +116,10 @@ export const AccessGate: React.FC<AccessGateProps> = ({ onUnlock, lang, onLangua
 
             <button
               type="submit"
-              className="w-full bg-slate-900 hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all transform active:scale-95 shadow-lg hover:shadow-xl"
+              disabled={verifying}
+              className="w-full bg-slate-900 hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all transform active:scale-95 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {text.button}
+              {verifying ? (lang === 'zh' ? '验证中...' : 'Verifying...') : text.button}
             </button>
           </form>
 
@@ -113,7 +128,7 @@ export const AccessGate: React.FC<AccessGateProps> = ({ onUnlock, lang, onLangua
           </div>
         </div>
       </div>
-      
+
       <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
